@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="100%" height="100%"
+		 creationComplete="creationCompleteHandler(event)"
+		 initialize="initializeHandler(event)">
+	<s:layout>
+		<s:BasicLayout/>
+	</s:layout>
+	<!--
+	1.mapObj.addOverlays(array,true);
+	2.MMapEvent.ADD_OVERLAY
+	3.关闭标签页注意销毁地图
+	4.设置地标是否可以编译,如移动:setOverlayEditableById(overlayId,isEditable)
+	5.设置地标是否可见: setOverlayVisibleById(overlayId,isVisible)
+	6.p66 点聚合api
+	7.当标注重叠时,这个方法可以使其置顶 setOverlayToTopById
+	8.及时移除监听器
+	9.removeAndDestroyOverlays() System.gc();
+	10.p83 addMenuItems
+	11.printMap()
+	12.mapObj.setCurrentMouseTool(MMapMouseTools.ADD_MARKER);
+	13.marker.editable=true;
+	14.update() 该方法用于更新覆盖物对象的属性。注意，该方法不能更新MMarker的对象的经纬度坐标。???
+	15.
+	-->
+	<mapabcmap:MFlexMap xmlns:mapabcmap="com.mapabc.maps.api.*"
+						id="mapAbc"
+						key="{[]}"
+						t="flexmap"
+						v="2.3.3"
+						x="0"
+						y="0"
+						width="100%"
+						height="100%"
+						overviewMap="{MDisplayState.SHOW}"
+						toolbar="{MToolbars.ROUND}"
+						MapReady="mapReadyHandler(event)"
+						scale="{MDisplayState.HIDE}"
+						centerCross="{MDisplayState.SHOW}"
+						minZoomLevel="5"
+						fullScreenButton="{MDisplayState.SHOW}"
+						/>
+	
+	<s:Panel id="panel" x="{mapAbc.x+mapAbc.width-panel.width-20}" y="20" width="245" height="555">
+		<s:VGroup x="0" y="0" width="100%" height="100%">
+			<s:Button label="添加Default标注" click="addDefaultMarker()"/>
+			<s:Button label="添加播放标注" click="addPlayMarker()"/>
+			<s:Button label="更新播放标注" click="updatePlayMarker(event)"/>
+			<s:Button label="删除播放标注" click="delPlayMarker(event)"/>
+			<s:Button label="添加停止标注" click="addStopMarker()"/>
+			<s:Button label="更新停止标注" click="updateStopMarker(event)"/>
+			<s:Button label="删除停止标注" click="delStopMarker(event)"/>
+			<s:Button label="添加RSS标注" click="addRssMarker()"/>
+			<s:Button label="更新RSS标注" click="updateRssMarker(event)"/>
+			<s:Button label="删除RSS标注" click="delRssMarker(event)"/>
+			<s:Button label="清除标注" click="clearMarkers(event)"/>
+			<s:Button label="销毁地图" click="destroyMap(event)"/>
+			<s:Button label="更新标注的上下文菜单" click="updateMarkerCtxMenuHandler(event)"/>
+			<s:Button label="更新地图的上下文菜单" click="updateMapCtxMenuHandler(event)"/>
+			<s:Button label="定时闪动" click="button1_clickHandler(event)"/>
+		</s:VGroup>
+	</s:Panel>
+	
+	<fx:Script>
+		<![CDATA[
+			import com.mapabc.maps.api.basetypes.MLngLat;
+			import com.mapabc.maps.api.basetypes.MSize;
+			import com.mapabc.maps.api.constants.MAlignPosition;
+			import com.mapabc.maps.api.constants.MDisplayState;
+			import com.mapabc.maps.api.constants.MMapMouseTools;
+			import com.mapabc.maps.api.constants.MToolbars;
+			import com.mapabc.maps.api.events.MMapEvent;
+			import com.mapabc.maps.api.events.MMapMouseEvent;
+			import com.mapabc.maps.api.events.MMapMoveEvent;
+			import com.mapabc.maps.api.overlays.MCircle;
+			import com.mapabc.maps.api.overlays.MMarker;
+			import com.mapabc.maps.api.overlays.options.MAreaOptions;
+			import com.mapabc.maps.api.overlays.options.MLabelOptions;
+			import com.mapabc.maps.api.overlays.options.MMarkerOptions;
+			import com.mapabc.maps.api.overlays.options.MTipOptions;
+			import com.mapabc.maps.api.styles.MFillStyle;
+			import com.mapabc.maps.api.styles.MLineStyle;
+			import com.mtea.mapabc.util.MarkerUtil;
+			import com.mtea.mapabc.util.MenuItemUtil;
+			import com.mtea.mapabc.util.TipOptionsUtil;
+			import com.mtea.mapabc.util.Tracer;
+			
+			import mx.controls.Alert;
+			import mx.events.FlexEvent;
+			
+//			protected var lnglatForDefault:MLngLat=new MLngLat(113.59904465282924,22.74064492755605);
+			protected var lnglatForDefault:MLngLat	=new MLngLat(113.59049495924945,22.74206977425838);
+			protected var lnglatForRss:MLngLat		=new MLngLat(113.59049495924946,22.74206977425839);
+			
+			protected var lnglatForPlay:MLngLat=new MLngLat(113.60269904136658,22.743503505840984);
+			protected var lnglatForStop:MLngLat=new MLngLat(113.63845762695315,22.817958477169558);
+			
+			protected var lnglatForUpdate:MLngLat=new MLngLat(113.59049495924945,22.74206977425838);
+			
+			/////////////////////////////////////////////////////////////////////
+			protected var defaultArray:Array=['地图菜单项-1','地图菜单项-2'];
+			
+			
+			
+			
+			private function addPlayMarker():void{
+				var markerOption:MMarkerOptions=new MMarkerOptions();
+				markerOption.imageUrl="icon_double_on.png"; 
+				markerOption.picAgent=false;
+				markerOption.tipOption=TipOptionsUtil.getDefaultTipOptions("播放标题","播放内容");
+				markerOption.isBounce=true;
+				markerOption.isDimorphic=true;
+				markerOption.imageAlign=MAlignPosition.BOTTOM_CENTER;
+				
+				var marker:MMarker=new MMarker(lnglatForPlay,markerOption);
+				marker.editable=true;
+				marker.id=MarkerUtil.getId(marker);
+				
+				mapAbc.addOverlay(marker,true);
+				mapAbc.openOverlayTip(MarkerUtil.getId(marker));
+				
+				trace("再次显示经纬度-latY:" + marker.lnglat.latY);
+				trace("再次显示经纬度-lngX:" + marker.lnglat.lngX);
+			}
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			/////////////////////////////////////////////////////////////////////
+			
+			
+			protected function creationCompleteHandler(event:FlexEvent):void
+			{
+				Tracer.debug("执行creationCompleteHandler");
+			}
+			
+			private function mapReadyHandler(e:MMapEvent):void {
+				Tracer.debug("执行mapReadyHandler");
+				flash.system.Security.allowDomain("*");
+				addDefaultMarker();
+				mapAbc.setZoomAndCenter(17,lnglatForDefault);
+				mapAbc.setDragEnabled(true);
+				mapAbc.setZoomEnabled(true);
+				mapAbc.setKeyboardEnabled(true);
+				mapAbc.setContinuousZoom(true);
+				
+				//获得地图的宽高
+				var size:MSize = mapAbc.getSize();
+				Tracer.debug(size.width+","+size.height,this);
+				
+				MenuItemUtil.setupMenuItemsForMap(defaultArray,mapAbc,onMenuItemClick);
+			}
+			
+			private function onMenuItemClick(e:ContextMenuEvent):void {
+				mapAbc.zoomIn();
+			}
+			
+			private function addDefaultMarker():void{
+				var markerOption:MMarkerOptions=new MMarkerOptions();
+				markerOption.imageUrl="defaultIcon.png"; 
+				markerOption.picAgent=false;
+				markerOption.tipOption=TipOptionsUtil.getDefaultTipOptions("默认标题","默认内容");
+				markerOption.imageAlign=MAlignPosition.BOTTOM_CENTER;
+				
+				var marker:MMarker=new MMarker(lnglatForDefault,markerOption);
+				marker.id=MarkerUtil.getId(marker);
+				mapAbc.addOverlay(marker,true);
+				mapAbc.openOverlayTip(MarkerUtil.getId(marker));
+			}
+
+			/*
+			* 播放
+			----------------------------*/
+
+
+			
+			protected function updatePlayMarker(event:MouseEvent):void
+			{
+				var resultmarker:MMarker=mapAbc.getOverlayById(MarkerUtil.getId2(lnglatForPlay)) as MMarker;
+				if(!resultmarker) return;
+				
+				updateMarker(resultmarker);			}
+
+
+			protected function delPlayMarker(event:MouseEvent):void
+			{
+				mapAbc.removeOverlayById(MarkerUtil.getId2(lnglatForPlay));
+			}
+
+			/*
+			 * 停止
+			 ----------------------------*/
+			
+			private function addStopMarker():void{
+				var markerOption:MMarkerOptions=new MMarkerOptions();
+//				markerOption.imageUrl="stopIcon.png"; 
+				markerOption.imageUrl="pity.gif"; 
+				markerOption.picAgent=false;
+				markerOption.tipOption=TipOptionsUtil.getDefaultTipOptions("停止标题","停止内容");
+				markerOption.imageAlign=MAlignPosition.BOTTOM_CENTER;
+				
+				var marker:MMarker=new MMarker(lnglatForStop,markerOption);
+				marker.id=MarkerUtil.getId(marker);
+				mapAbc.addOverlay(marker,true);
+				mapAbc.openOverlayTip(MarkerUtil.getId(marker));
+			}
+			protected function updateStopMarker(event:MouseEvent):void
+			{
+				var resultmarker:MMarker=mapAbc.getOverlayById(MarkerUtil.getId2(lnglatForStop)) as MMarker;
+				if(!resultmarker) return;
+				
+				updateMarker(resultmarker);
+			}
+
+
+			protected function delStopMarker(event:MouseEvent):void
+			{
+				mapAbc.removeOverlayById(MarkerUtil.getId2(lnglatForStop));
+			}
+
+			/*
+			* Rss
+			----------------------------*/
+			
+			private function addRssMarker():void{
+				var markerOption:MMarkerOptions=new MMarkerOptions();
+				markerOption.imageUrl="rssIcon.png"; 
+				markerOption.picAgent=false;
+				markerOption.tipOption=TipOptionsUtil.getDefaultTipOptions("Rss标题","Rss内容");
+				markerOption.isBounce=true;
+				markerOption.isDimorphic=true;
+				markerOption.imageAlign=MAlignPosition.BOTTOM_CENTER;
+				
+				var marker:MMarker=new MMarker(lnglatForRss,markerOption);
+				marker.editable=true;
+				marker.id=MarkerUtil.getId(marker);
+				//设置二态效果
+				mapAbc.setOverlayDimorphicById(MarkerUtil.getId(marker),true);
+				//lnglatForRss 和 lnglatForDefault 经纬度是一样的，但是setOverlayToTopById不起效果
+				mapAbc.setOverlayToTopById(marker.id);
+				mapAbc.addOverlay(marker,true);
+				mapAbc.openOverlayTip(MarkerUtil.getId(marker));
+				//先添加标注后增加事件,事件不起效果,除了MOUSE_CLICK,MOUSE_OVER,MOUSE_OUT
+				//先添加事件后增加标注,抛出异常
+				marker.addEventListener(MMapEvent.ADD_OVERLAY,onAddRssMarker);
+				marker.addEventListener(MMapMoveEvent.MOVE_END,onAddRssMoveEndMarker);
+				marker.addEventListener(MMapMouseEvent.MOUSE_CLICK,onRssMarkerClicked);
+				marker.addEventListener(MMapMouseEvent.MOUSE_OVER,onRssMarkerOver);
+				marker.addEventListener(MMapMouseEvent.MOUSE_DBCLICK,onRssMarkerDbclick);
+				marker.addEventListener(MMapMouseEvent.MOUSE_OUT,onRssMarkerOut);
+			}
+
+			protected function updateRssMarker(event:MouseEvent):void
+			{
+				var resultmarker:MMarker=mapAbc.getOverlayById(MarkerUtil.getId2(lnglatForRss)) as MMarker;
+				if(!resultmarker) return;
+				
+				updateMarker(resultmarker);
+				
+			}
+
+			protected function delRssMarker(event:MouseEvent):void
+			{
+				mapAbc.removeOverlayById(MarkerUtil.getId2(lnglatForRss));
+			}
+			
+			protected function onAddRssMarker(event:MMapEvent):void
+			{
+				Tracer.debug("onAddRssMarker",true);
+			}
+			protected function onAddRssMoveEndMarker(event:MMapMoveEvent):void
+			{
+				Tracer.debug("onAddRssMoveEndMarker",true);
+			}
+			protected function onRssMarkerClicked(event:MMapMouseEvent):void
+			{
+				Tracer.debug("onRssMarkerClicked",true);
+			}
+			protected function onRssMarkerOver(event:MMapMouseEvent):void
+			{
+				MenuItemUtil.setupMenuItemsForMarker(['RssMarker菜单项-1','RssMarker菜单项-2'],mapAbc,onMenuItemClick);
+				Tracer.debug("onRssMarkerOver",true);
+			}
+			protected function onRssMarkerDbclick(event:MMapMouseEvent):void
+			{
+				Tracer.debug("onRssMarkerDbclick",true);
+			}
+			protected function onRssMarkerOut(event:MMapMouseEvent):void
+			{
+				MenuItemUtil.setupMenuItemsForMap(['地图菜单项-1','地图菜单项-2'],mapAbc,onMenuItemClick);
+				Tracer.debug("onRssMarkerOut",true);
+			}
+
+			/*
+			* 其他
+			----------------------------*/
+
+			protected function updateMarker(marker:MMarker):void
+			{
+				var markerOption:MMarkerOptions=new MMarkerOptions();
+				markerOption.imageUrl="updateIcon.png"; 
+				markerOption.picAgent=false;
+				markerOption.tipOption=TipOptionsUtil.getDefaultTipOptions("已更新标题已更新标题已更新标题已更新标题","已更新内容\n已更新内容\n已更新内容\n已更新内容\n已更新内容\n");
+				marker.option=markerOption;
+				marker.lnglat=lnglatForUpdate;
+				//更新之后再也不能更新了
+				marker.editable=true;
+				//更新后打开信息窗口
+				mapAbc.updateOverlay(marker);
+				mapAbc.openOverlayTip(MarkerUtil.getId(marker));
+			}
+			protected function clearMarkers(event:MouseEvent):void
+			{
+				mapAbc.clearMap();
+			}
+
+
+			protected function destroyMap(event:MouseEvent):void
+			{
+				mapAbc.destroy();
+				mapAbc = null;
+				System.gc();
+			}
+
+			protected function initializeHandler(event:FlexEvent):void
+			{
+				Tracer.debug("执行initializeHandler");
+			}
+
+			protected function updateMarkerCtxMenuHandler(event:MouseEvent):void
+			{
+				//Tracer.debug("已经更新标注菜单项");
+				//MenuItemUtil.setupMenuItemsForMarker(["已经更新标注菜单项-1","已经更新标注菜单项-2"],mapObj,null);
+			}
+
+			protected function updateMapCtxMenuHandler(event:MouseEvent):void
+			{
+				Tracer.debug("已经更新地图菜单项");
+				
+				for each (var index:int in defaultArray){
+					mapAbc.removeMenuItem(defaultArray[index]);
+				}
+				MenuItemUtil.setupMenuItemsForMap(["已经更新地图菜单项-1","已经更新地图菜单项-2"],mapAbc,null);
+			}
+
+			//定时闪动
+			protected function button1_clickHandler(event:MouseEvent):void
+			{
+				var alarmOverlayService:MapAlarmOverlayService = new MapAlarmOverlayService(mapAbc,lnglatForDefault);
+				alarmOverlayService.startBlinkTime();
+				
+			}
+
+		]]>
+	</fx:Script> 
+</s:Group>

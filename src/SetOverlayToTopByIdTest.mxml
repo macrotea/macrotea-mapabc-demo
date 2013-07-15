@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" >
+	<mapabcMap:MFlexMap xmlns:mapabcMap="com.mapabc.maps.api.*"  id="mapObj" t="flexmap" v="2.3.3"
+						key="{['b0a7db0b3a30f944a21c3682064dc70ef5b738b062f6479a5eca39725798b1ee300bd8d5de3a4ae3']}"
+						overviewMap="{MDisplayState.SHOW}" toolbar="{MToolbars.ROUND}"  zoom="10" width="100%" height="100%" MapReady="onReady(event)"  x="2" y="7"/>
+	<mx:Script>
+		<![CDATA[
+			import com.mapabc.maps.api.events.MMapEvent;
+			import com.mapabc.maps.api.MFlexMap;
+			import com.mapabc.maps.api.constants.MToolbars;
+			import com.mapabc.maps.api.constants.MDisplayState;
+			import com.mapabc.maps.api.overlays.options.MMarkerOptions;
+			import com.mapabc.maps.api.overlays.MMarker;
+			import com.mapabc.maps.api.overlays.MPolyline;
+			import com.mapabc.maps.api.overlays.options.MLineOptions;
+			import com.mapabc.maps.api.styles.MLineStyle;
+			import com.mapabc.maps.api.overlays.options.MAreaOptions;
+			import com.mapabc.maps.api.styles.MAreaStyle;
+			import com.mapabc.maps.api.styles.MLineStyle;
+			import com.mapabc.maps.api.styles.MFillStyle;
+			import com.mapabc.maps.api.basetypes.MLngLat;
+			import com.mapabc.maps.api.overlays.MPolygon;
+			import com.mapabc.maps.api.overlays.MRectangle;
+			
+			function onReady(event:MMapEvent){
+				addOverlaysDemo();
+			}
+			function addOverlaysDemo() {
+				var markerOption:MMarkerOptions = new MMarkerOptions();
+				markerOption.imageUrl ="http://code.mapabc.com/images/lan_1.png";
+				markerOption.picAgent = false;
+				markerOption.imageAlign=5;
+				markerOption.canShowTip= false;
+				var ll:MLngLat = new MLngLat("116.39718532562256","39.913850920735");
+				var Mmarker:MMarker = new MMarker(ll,markerOption);
+				Mmarker.id="point1";
+				
+				var markerOption1:MMarkerOptions = new MMarkerOptions();
+				markerOption1.imageUrl ="http://code.mapabc.com/images/num/0_10.gif";
+				markerOption1.picAgent = false;
+				markerOption1.imageAlign=5;
+				markerOption1.canShowTip= false;
+				var ll2:MLngLat = new MLngLat("116.39748532562256","39.913650920735");
+				var Mmarker1:MMarker= new MMarker(ll2,markerOption1);
+				Mmarker1.id="point2";
+				
+				
+				var arrline:Array = new Array();
+				arrline.push(new MLngLat("116.280090411376953 ","39.923523004886866"));
+				arrline.push(new MLngLat("116.37790411376953","39.923523004886866"));
+				arrline.push(new MLngLat("116.48401611328125","39.91433799896189"));
+				var line:MPolyline = new MPolyline(arrline);
+				line.id = "line1";
+				
+				var arrline1:Array= new Array();
+				arrline1.push(new MLngLat("116.280290411376953 ","39.923523004886866"));
+				arrline1.push(new MLngLat("116.37780411376953","39.923523004886866"));
+				arrline1.push(new MLngLat("116.48421611328125","39.91433799896189"));
+				var lineopt1:MLineOptions  = new MLineOptions();
+				var lineStyle:MLineStyle=new MLineStyle();
+				lineStyle.color=0xff0000;
+				lineopt1.lineStyle=lineStyle;
+				lineopt1.canShowTip = false;
+				var line2:MPolyline = new MPolyline(arrline1,lineopt1);
+				line2.id = "line2";
+				
+				
+				var areopt:MAreaOptions = new MAreaOptions();
+				areopt.isDimorphic=false;//可选项，是否具有二态，默认为false即没有二态
+				areopt.dimorphicColor=0x00A0FF;
+				areopt.canShowTip=false;
+				var areaStyle:MAreaStyle=new MAreaStyle();
+				var borderStyle:MLineStyle=new MLineStyle();
+				borderStyle.color=0x0000ff;
+				areaStyle.borderStyle=borderStyle;
+				var fillStyle:MFillStyle=new MFillStyle();
+				fillStyle.color=0xf5deb3;
+				fillStyle.alpha=0.8;
+				areaStyle.fillStyle=fillStyle;
+				areopt.areaStyle=areaStyle;
+				var lng:Number=116.37790411376953;
+				var lat:Number=39.923523004886866;
+				var arr:Array=new Array();
+				arr.push(new MLngLat(lng-0.075,lat));
+				arr.push(new MLngLat(lng-0.025,lat+0.05));
+				arr.push(new MLngLat(lng+0.025,lat+0.05));
+				arr.push(new MLngLat(lng+0.075,lat));
+				arr.push(new MLngLat(lng+0.025,lat-0.05));
+				arr.push(new MLngLat(lng-0.025,lat-0.05));
+				var polygon:MPolygon=new MPolygon(arr,areopt);
+				polygon.id="polygon";
+				
+				var ary:Array = new Array();
+				ary.push(new MLngLat("116.36890411376953","39.893423004886866"));
+				ary.push(new MLngLat("116.44727188110351","39.95450133090293"));
+				var rectangle:MRectangle=new MRectangle(ary);
+				rectangle.id="rect";
+				
+				var arr:Array= new Array();
+				arr.push(Mmarker);
+				arr.push(Mmarker1);
+				arr.push(line);
+				arr.push(line2);
+				arr.push(polygon);
+				arr.push(rectangle);
+				mapObj.addOverlays(arr,true);
+				mapObj.setZoomLevel(12);
+			}
+			function setMarker1ToTop():void {//蓝点置顶
+				mapObj.setOverlayToTopById('point1');
+			}
+			function setMarker2ToTop():void {//红点置顶
+				mapObj.setOverlayToTopById('point2');
+			}
+			function setLine1ToTop():void {//蓝线置顶
+				mapObj.setOverlayToTopById('line1');
+			}
+			function setLine2ToTop():void {//红线置顶
+				mapObj.setOverlayToTopById('line2');
+			}
+			function setPolygonToTop():void {//多边形置顶
+				mapObj.setOverlayToTopById("polygon");
+			}
+			function setRectToTop():void {//矩形置顶
+				mapObj.setOverlayToTopById("rect");
+			}
+		]]>
+	</mx:Script>
+	<mx:Panel id="panel" x="{mapObj.x+mapObj.width-panel.width}" y="23" width="150" height="210" layout="absolute">
+		<mx:Button x="10"  y="10" width="110"  label="蓝点置顶" fontWeight="normal" fontSize="12" click="setMarker1ToTop()"/>
+		<mx:Button x="10"  y="35" width="110"  label="红点置顶" fontWeight="normal" fontSize="12" click="setMarker2ToTop()"/>
+		<mx:Button x="10"  y="60" width="110"  label="蓝线置顶" fontWeight="normal" fontSize="12" click="setLine1ToTop()"/>
+		<mx:Button x="10"  y="85" width="110"  label="红线置顶" fontWeight="normal" fontSize="12" click="setLine2ToTop()"/>
+		<mx:Button x="10"  y="110" width="110"  label="多边形置顶" fontWeight="normal" fontSize="12" click="setPolygonToTop()"/>
+		<mx:Button x="10"  y="135" width="110"  label="矩形置顶" fontWeight="normal" fontSize="12" click="setRectToTop()"/>
+	</mx:Panel>
+</mx:Application>
